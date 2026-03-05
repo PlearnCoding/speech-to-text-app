@@ -3,96 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speech to Text Pro</title>
+    <title>Speech to Text Pro - Meeting Edition</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .gradient-bg { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); }
+        /* ปรับปรุง Scrollbar ให้ดูสะอาดตา */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen font-sans flex flex-col items-center p-0 sm:p-4 w-full">
+<body class="bg-gray-100 min-h-screen font-sans flex flex-col items-center p-0 sm:p-4 w-full overflow-x-hidden">
 
     <!-- ========================================== -->
     <!-- 1. ตั้งค่า URL ของ Google Apps Script ตรงนี้ -->
     <!-- ========================================== -->
     <script>
-        // วางลิงก์ Web App ของคุณที่ลงท้ายด้วย /exec ภายในเครื่องหมายคำพูดด้านล่าง
         const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxNeTB5l5BM_WpKhlGLKojSMPIiR1BtoOloT8IH-c5f8QynoMC0kfaCxVRRkgS2sPq4/exec";
     </script>
 
-    <div class="max-w-2xl w-full flex flex-col gap-4 sm:gap-6 pb-10">
+    <div class="max-w-2xl w-full flex flex-col gap-4 pb-10">
         
-        <!-- Main Content (กล่องฟังเสียง) - ความสูงเกือบเต็มจอแรก -->
-        <main class="flex flex-col bg-white sm:rounded-2xl shadow-sm sm:border border-gray-200 overflow-hidden relative h-[92vh] sm:h-[85vh] shrink-0 w-full">
+        <!-- Main Content (กล่องฟังเสียง) -->
+        <main class="flex flex-col bg-white sm:rounded-3xl shadow-lg sm:border border-gray-200 overflow-hidden relative h-[90vh] sm:h-[85vh] shrink-0 w-full">
             
-            <!-- Header (ย่อขนาดลง) -->
-            <header class="gradient-bg text-white p-3 shadow-sm z-10 shrink-0 flex items-center justify-center">
-                <h1 class="text-base font-bold"><i class="fas fa-microphone-alt mr-2"></i>Speech to Text Pro</h1>
+            <!-- Header (กะทัดรัดขึ้น) -->
+            <header class="gradient-bg text-white p-3 shadow-md z-10 shrink-0 flex items-center justify-between px-4">
+                <h1 class="text-sm font-bold flex items-center gap-2">
+                    <i class="fas fa-podcast text-red-400 animate-pulse hidden" id="liveIcon"></i>
+                    Meeting Recorder Pro
+                </h1>
+                <div id="confidenceIndicator" class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full">ความแม่นยำ: -</div>
             </header>
             
-            <!-- แถบด้านบน: เลือกภาษาต้นทาง & ปุ่มล้าง -->
+            <!-- แถบด้านบน: เครื่องมือ -->
             <div class="flex justify-between items-center p-2 border-b border-gray-100 bg-gray-50 shrink-0">
-                <div class="flex items-center gap-2">
-                    <span id="statusIndicator" class="text-xs font-bold text-gray-500 flex items-center gap-1.5 ml-1">
-                        <i id="statusIcon" class="fas fa-circle text-gray-300"></i>
-                        <span id="statusText">รอการใช้งาน</span>
-                    </span>
-                    <select id="langSelect" class="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg py-1 px-2 focus:outline-none focus:ring-1 focus:ring-indigo-500 ml-1 sm:ml-2">
-                        <option value="th-TH">พูด: ไทย</option>
-                        <option value="en-US">พูด: English</option>
-                        <option value="ja-JP">พูด: 日本語</option>
-                        <option value="zh-CN">พูด: 中文</option>
+                <div class="flex items-center gap-1.5">
+                    <select id="langSelect" class="bg-white border border-gray-200 text-gray-700 text-xs rounded-lg py-1 px-2 focus:ring-1 focus:ring-indigo-500 outline-none">
+                        <option value="th-TH">ภาษาไทย (TH)</option>
+                        <option value="en-US">English (US)</option>
+                        <option value="ja-JP">日本語 (JP)</option>
+                        <option value="zh-CN">中文 (CN)</option>
                     </select>
+                    <span id="statusText" class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter ml-1">OFFLINE</span>
                 </div>
-                <button id="clearBtn" class="text-xs text-red-500 hover:text-red-700 font-bold px-3 py-1.5 bg-red-50 rounded-lg transition-colors">
-                    <i class="fas fa-trash mr-1"></i> ล้าง
-                </button>
+                <div class="flex gap-2">
+                    <button id="clearBtn" class="text-[11px] text-red-500 font-bold px-3 py-1.5 hover:bg-red-50 rounded-lg transition-all">
+                        <i class="fas fa-trash-alt"></i> ล้างหน้าจอ
+                    </button>
+                </div>
             </div>
             
-            <!-- พื้นที่แสดงข้อความ (แก้ไขได้ + เต็มจอ) -->
-            <textarea id="finalText" class="flex-grow w-full p-4 text-gray-800 text-lg overflow-y-auto whitespace-pre-wrap leading-relaxed resize-none focus:outline-none bg-transparent" placeholder="ข้อความจะแสดงที่นี่... สามารถคลิกและพิมพ์แก้ไขได้"></textarea>
+            <!-- พื้นที่แสดงข้อความ (แก้ไขได้) -->
+            <textarea id="finalText" class="flex-grow w-full p-5 text-gray-800 text-lg overflow-y-auto whitespace-pre-wrap leading-relaxed resize-none focus:outline-none bg-transparent" placeholder="ระบบกำลังรอรับเสียงบรรยายในห้องประชุม... (กรุณาวางอุปกรณ์ไว้ใกล้ลำโพงหรือผู้พูดเพื่อให้ผลลัพธ์ดีที่สุด)"></textarea>
             
-            <!-- ข้อความชั่วคราว -->
-            <div id="interimText" class="p-2 text-indigo-400 italic text-sm min-h-[2.5rem] bg-indigo-50/50 border-t border-gray-100 shrink-0"></div>
+            <!-- ข้อความชั่วคราว (Interim) -->
+            <div id="interimText" class="px-5 py-3 text-indigo-500 font-medium italic text-sm min-h-[3rem] bg-indigo-50/30 border-t border-gray-50 shrink-0 flex items-center"></div>
             
-            <!-- ปุ่มควบคุมหลัก (ตัวหนังสือเล็กลง) -->
-            <div class="p-2 sm:p-3 bg-white border-t border-gray-100 flex gap-2 shrink-0">
-                <button id="recordBtn" class="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95">
-                    <i id="recordIcon" class="fas fa-microphone text-sm"></i>
-                    <span id="recordText" class="text-sm">เริ่มพูด</span>
+            <!-- ปุ่มควบคุมหลัก -->
+            <div class="p-3 bg-white border-t border-gray-100 flex gap-2 shrink-0">
+                <button id="recordBtn" class="flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3.5 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95">
+                    <i id="recordIcon" class="fas fa-microphone"></i>
+                    <span id="recordText" class="text-sm">เริ่มบันทึก</span>
                 </button>
-                <button id="saveBtn" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95">
-                    <i class="fas fa-save text-sm"></i>
-                    <span class="text-sm">บันทึกลงชีท</span>
+                <button id="saveBtn" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 active:scale-95">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span class="text-sm">Save</span>
                 </button>
             </div>
         </main>
 
-        <!-- Translation Content (ส่วนแปลภาษา - เลื่อนจอลงมาถึงจะเจอ) -->
-        <div class="flex flex-col bg-white sm:rounded-2xl shadow-sm sm:border border-t border-gray-200 overflow-hidden min-h-[400px] shrink-0 w-full">
-            <!-- แถบเครื่องมือแปลภาษา -->
-            <div class="flex justify-between items-center p-3 border-b border-gray-100 bg-amber-50 shrink-0">
-                <div class="flex items-center gap-2 w-full max-w-[75%]">
-                    <i class="fas fa-language text-amber-600 ml-1 text-lg"></i>
-                    <select id="translateLangSelect" class="w-full bg-white border border-amber-200 text-gray-700 text-sm rounded-lg py-1.5 px-2 focus:outline-none focus:ring-1 focus:ring-amber-500 font-medium">
-                        <option value="en">แปลเป็น: English</option>
-                        <option value="th">แปลเป็น: ภาษาไทย</option>
-                        <option value="ja">แปลเป็น: 日本語 (Japanese)</option>
-                        <option value="zh-CN">แปลเป็น: 中文 (Chinese)</option>
-                        <option value="ko">แปลเป็น: 한국어 (Korean)</option>
+        <!-- Translation Card (เลื่อนลงมา) -->
+        <div class="flex flex-col bg-white sm:rounded-3xl shadow-lg border-t border-gray-200 overflow-hidden min-h-[450px] shrink-0 w-full mb-10">
+            <div class="flex justify-between items-center p-4 border-b border-gray-100 bg-amber-50 shrink-0">
+                <div class="flex items-center gap-3 w-full max-w-[70%]">
+                    <div class="bg-amber-100 p-2 rounded-lg text-amber-600">
+                        <i class="fas fa-language text-xl"></i>
+                    </div>
+                    <select id="translateLangSelect" class="w-full bg-white border border-amber-200 text-gray-700 text-sm rounded-xl py-2 px-3 focus:ring-2 focus:ring-amber-500 outline-none font-medium">
+                        <option value="en">แปลสรุปเป็น: English</option>
+                        <option value="th">แปลสรุปเป็น: ภาษาไทย</option>
+                        <option value="ja">แปลสรุปเป็น: Japanese</option>
+                        <option value="zh-CN">แปลสรุปเป็น: Chinese</option>
                     </select>
                 </div>
-                <button id="translateBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-1.5 px-4 rounded-lg shadow transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap text-sm">
-                    <i class="fas fa-magic"></i> แปล
+                <button id="translateBtn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-lg transition-all active:scale-95 flex items-center gap-2 text-sm">
+                    <i class="fas fa-bolt"></i> แปลทันที
                 </button>
             </div>
-            
-            <!-- พื้นที่แสดงผลการแปล -->
-            <div id="translateResult" class="flex-grow p-4 text-gray-800 text-lg overflow-y-auto whitespace-pre-wrap leading-relaxed bg-amber-50/20"></div>
+            <div id="translateResult" class="flex-grow p-6 text-gray-800 text-lg overflow-y-auto whitespace-pre-wrap leading-relaxed bg-amber-50/10" placeholder="คำแปลจะปรากฏที่นี่หลังจากกดปุ่มแปล..."></div>
         </div>
     </div>
 
-    <!-- Script Logic -->
     <script>
         const DOM = {
             lang: document.getElementById('langSelect'),
@@ -101,12 +105,11 @@
             recordBtn: document.getElementById('recordBtn'),
             recordIcon: document.getElementById('recordIcon'),
             recordText: document.getElementById('recordText'),
-            statusIcon: document.getElementById('statusIcon'),
             statusText: document.getElementById('statusText'),
+            liveIcon: document.getElementById('liveIcon'),
             clearBtn: document.getElementById('clearBtn'),
             saveBtn: document.getElementById('saveBtn'),
-            
-            // Translation
+            confidence: document.getElementById('confidenceIndicator'),
             translateLang: document.getElementById('translateLangSelect'),
             translateBtn: document.getElementById('translateBtn'),
             translateResult: document.getElementById('translateResult')
@@ -114,17 +117,20 @@
 
         let recognition = null;
         let isRecording = false;
+        let ignoreNextEnd = false;
+        let historyText = ""; // เก็บข้อความที่ยืนยันแล้วในอดีต
 
-        function initRecognition() {
+        function setupRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (!SpeechRecognition) {
-                alert("เบราว์เซอร์ไม่รองรับการแปลงเสียง กรุณาใช้ Chrome หรือ Safari");
+                alert("เบราว์เซอร์ไม่รองรับ Speech Recognition ครับ");
                 return null;
             }
 
             const rec = new SpeechRecognition();
             rec.continuous = true;
             rec.interimResults = true;
+            rec.maxAlternatives = 1;
 
             rec.onstart = () => {
                 isRecording = true;
@@ -132,31 +138,44 @@
             };
 
             rec.onresult = (event) => {
-                let interim = '';
+                let interimTranscript = '';
+                let currentSessionFinal = '';
+
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
-                        // นำข้อความที่พูดเสร็จแล้วมาต่อท้ายใน Textarea โดยตรง
-                        DOM.finalText.value += event.results[i][0].transcript + ' ';
-                        // เลื่อนหน้าจอลงล่างสุด
-                        DOM.finalText.scrollTop = DOM.finalText.scrollHeight;
+                        currentSessionFinal += transcript + ' ';
+                        // แสดงความแม่นยำ
+                        const conf = Math.round(event.results[i][0].confidence * 100);
+                        DOM.confidence.innerText = `ความแม่นยำ: ${conf}%`;
                     } else {
-                        interim += event.results[i][0].transcript;
+                        interimTranscript += transcript;
                     }
                 }
-                DOM.interimText.innerText = interim;
+
+                if (currentSessionFinal) {
+                    // ป้องกันการเบิ้ล: ถ้าข้อความใหม่เหมือนกับข้อความล่าสุดใน textarea ให้ข้ามไป
+                    const currentVal = DOM.finalText.value;
+                    if (!currentVal.endsWith(currentSessionFinal)) {
+                        DOM.finalText.value += currentSessionFinal;
+                        DOM.finalText.scrollTop = DOM.finalText.scrollHeight;
+                    }
+                }
+                DOM.interimText.innerText = interimTranscript;
             };
 
             rec.onerror = (event) => {
                 console.error("Speech Error:", event.error);
+                if (event.error === 'no-speech') return; // เงียบเฉยๆ ไม่ต้องปิด
+                if (event.error === 'not-allowed') alert("กรุณาเปิดไมโครโฟนด้วยครับ");
+                
                 isRecording = false;
                 updateUI(false);
-                if (event.error === 'not-allowed') {
-                    alert("กรุณาอนุญาตการเข้าถึงไมโครโฟนในเบราว์เซอร์ของคุณ");
-                }
             };
 
             rec.onend = () => {
                 if (isRecording) {
+                    // หากยังต้องการบันทึกอยู่ (เช่น หยุดเพราะเงียบนานเกินไป) ให้เริ่มใหม่แบบเงียบๆ
                     try { rec.start(); } catch(e) {}
                 } else {
                     updateUI(false);
@@ -166,27 +185,27 @@
             return rec;
         }
 
-        function updateUI(isListening) {
-            if (isListening) {
-                DOM.recordBtn.className = "flex-[2] bg-red-500 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95";
-                DOM.recordIcon.className = "fas fa-stop text-sm animate-pulse";
-                DOM.recordText.innerText = "หยุดพูด";
-                DOM.statusIcon.className = "fas fa-circle text-red-500 animate-pulse";
-                DOM.statusText.innerText = "กำลังฟัง...";
-                DOM.statusText.className = "text-red-500 font-bold text-xs";
+        function updateUI(active) {
+            if (active) {
+                DOM.recordBtn.classList.replace('bg-indigo-600', 'bg-red-500');
+                DOM.recordIcon.classList.add('animate-pulse');
+                DOM.recordText.innerText = "หยุดบันทึก";
+                DOM.statusText.innerText = "LIVE / RECORDING";
+                DOM.statusText.classList.replace('text-gray-400', 'text-red-500');
+                DOM.liveIcon.classList.remove('hidden');
             } else {
-                DOM.recordBtn.className = "flex-[2] bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5 active:scale-95";
-                DOM.recordIcon.className = "fas fa-microphone text-sm";
-                DOM.recordText.innerText = "เริ่มพูด";
-                DOM.statusIcon.className = "fas fa-circle text-gray-300";
-                DOM.statusText.innerText = "หยุดชั่วคราว";
-                DOM.statusText.className = "text-gray-500 text-xs";
+                DOM.recordBtn.classList.replace('bg-red-500', 'bg-indigo-600');
+                DOM.recordIcon.classList.remove('animate-pulse');
+                DOM.recordText.innerText = "เริ่มบันทึก";
+                DOM.statusText.innerText = "OFFLINE / IDLE";
+                DOM.statusText.classList.replace('text-red-500', 'text-gray-400');
+                DOM.liveIcon.classList.add('hidden');
                 DOM.interimText.innerText = "";
             }
         }
 
         DOM.recordBtn.addEventListener('click', () => {
-            if (!recognition) recognition = initRecognition();
+            if (!recognition) recognition = setupRecognition();
             if (!recognition) return;
 
             if (isRecording) {
@@ -197,110 +216,67 @@
                 try {
                     recognition.start();
                 } catch(e) {
-                    console.warn("ระบบไมค์กำลังทำงานอยู่ หรือถูกขัดจังหวะ: ", e);
+                    console.warn("Recognition already started");
                 }
             }
         });
 
         DOM.clearBtn.addEventListener('click', () => {
-            if(confirm('ต้องการล้างข้อความทั้งหมดหรือไม่?')) {
+            if (confirm('ยืนยันการล้างข้อความทั้งหมดหรือไม่?')) {
                 DOM.finalText.value = '';
                 DOM.interimText.innerText = '';
                 DOM.translateResult.innerText = '';
             }
         });
 
-        // ==========================================
-        // ระบบแปลภาษา (Google Translate API Free)
-        // ==========================================
         DOM.translateBtn.addEventListener('click', async () => {
-            const textToTranslate = DOM.finalText.value.trim();
-            if (!textToTranslate) {
-                alert("ไม่มีข้อความให้แปลครับ กรุณาพิมพ์หรือพูดก่อน");
-                return;
-            }
+            const text = DOM.finalText.value.trim();
+            if (!text) return alert("ยังไม่มีเนื้อหาการประชุมให้แปลครับ");
 
-            const targetLang = DOM.translateLang.value;
-            const originalBtnHtml = DOM.translateBtn.innerHTML;
-            
-            // เปลี่ยนสถานะปุ่ม
-            DOM.translateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> รอ..';
+            const originalBtn = DOM.translateBtn.innerHTML;
+            DOM.translateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสรุป..';
             DOM.translateBtn.disabled = true;
-            DOM.translateResult.innerText = "กำลังแปลภาษา...";
 
             try {
-                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(textToTranslate)}`;
-                const response = await fetch(url);
-                const data = await response.json();
-                
-                // นำข้อความที่แปลแล้วมาต่อกัน
-                const translatedText = data[0].map(segment => segment[0]).join('');
-                DOM.translateResult.innerText = translatedText;
-            } catch (error) {
-                console.error("Translation Error:", error);
-                DOM.translateResult.innerText = "❌ เกิดข้อผิดพลาดในการแปลภาษา โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต";
+                const target = DOM.translateLang.value;
+                const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${target}&dt=t&q=${encodeURIComponent(text)}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                const translated = data[0].map(s => s[0]).join('');
+                DOM.translateResult.innerText = translated;
+            } catch (e) {
+                alert("การแปลขัดข้อง กรุณาลองอีกครั้ง");
             } finally {
-                // คืนค่าปุ่ม
-                DOM.translateBtn.innerHTML = originalBtnHtml;
+                DOM.translateBtn.innerHTML = originalBtn;
                 DOM.translateBtn.disabled = false;
             }
         });
 
-        // ==========================================
-        // ระบบบันทึกลง Google Sheet
-        // ==========================================
         DOM.saveBtn.addEventListener('click', () => {
-            const textToSave = DOM.finalText.value.trim();
-            const langText = DOM.lang.options[DOM.lang.selectedIndex].text;
+            const text = DOM.finalText.value.trim();
+            if (!text) return alert("ไม่มีข้อความให้บันทึก");
+            if (GAS_API_URL.includes("ใส่_URL")) return alert("กรุณาติดตั้ง Apps Script URL ก่อนครับ");
 
-            if (!textToSave) return alert("ไม่มีข้อความให้บันทึกครับ");
-            if (!GAS_API_URL || GAS_API_URL.includes("ใส่_URL")) return alert("กรุณานำ URL ของ Apps Script มาใส่ในโค้ดบรรทัดที่ 12 ก่อนครับ");
-
-            if(isRecording) {
-                isRecording = false;
-                recognition.stop();
-            }
-
-            const oldText = DOM.saveBtn.innerHTML;
-            DOM.saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังส่ง...';
+            const originalBtn = DOM.saveBtn.innerHTML;
+            DOM.saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ส่งข้อมูล..';
             DOM.saveBtn.disabled = true;
 
-            // ส่งข้อมูลผ่าน API (Fetch) ไปที่ Google Apps Script
             fetch(GAS_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ text: textToSave, lang: langText })
+                body: JSON.stringify({ text: text, lang: DOM.lang.options[DOM.lang.selectedIndex].text })
             })
-            .then(response => response.json())
-            .then(data => {
-                DOM.saveBtn.innerHTML = oldText;
-                DOM.saveBtn.disabled = false;
-                if(data.success) {
-                    alert("✅ บันทึกลง Sheet สำเร็จ! กำลังโหลดไฟล์ .txt");
-                    downloadTxt(textToSave);
-                } else {
-                    alert("❌ ข้อผิดพลาดจากฝั่งเซิร์ฟเวอร์: " + data.message);
-                }
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) alert("บันทึกลง Google Sheet สำเร็จ!");
+                else alert("เกิดข้อผิดพลาด: " + d.message);
             })
-            .catch(error => {
-                DOM.saveBtn.innerHTML = oldText;
+            .catch(e => alert("เชื่อมต่อ Server ไม่ได้ ตรวจสอบ URL /exec อีกครั้ง"))
+            .finally(() => {
+                DOM.saveBtn.innerHTML = originalBtn;
                 DOM.saveBtn.disabled = false;
-                alert("❌ การเชื่อมต่อล้มเหลว ตรวจสอบว่า URL Apps Script ถูกต้องและลงท้ายด้วย /exec");
-                console.error(error);
             });
         });
-
-        function downloadTxt(text) {
-            const blob = new Blob([text], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Speech_${new Date().getTime()}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
     </script>
 </body>
 </html>
