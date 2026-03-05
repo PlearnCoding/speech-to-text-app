@@ -268,7 +268,10 @@
             })
             .then(r => r.json())
             .then(d => {
-                if (d.success) alert("บันทึกลง Google Sheet สำเร็จ!");
+                if (d.success){
+                    alert("บันทึกลง Google Sheet สำเร็จ!");
+                    downloadTxt(text);
+                }
                 else alert("เกิดข้อผิดพลาด: " + d.message);
             })
             .catch(e => alert("เชื่อมต่อ Server ไม่ได้ ตรวจสอบ URL /exec อีกครั้ง"))
@@ -277,6 +280,18 @@
                 DOM.saveBtn.disabled = false;
             });
         });
+        function downloadTxt(text) {
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Speech_${new Date().getTime()}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
     </script>
 </body>
 </html>
+
